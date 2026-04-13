@@ -6,9 +6,10 @@ import { save } from '@/lib/storage'
 
 interface Props {
   onAuth: (user: User) => void
+  onDemo: () => void
 }
 
-export default function AuthScreen({ onAuth }: Props) {
+export default function AuthScreen({ onAuth, onDemo }: Props) {
   const [mode, setMode]   = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
   const [pass, setPass]   = useState('')
@@ -67,6 +68,33 @@ export default function AuthScreen({ onAuth }: Props) {
           </div>
 
           <div className="mono up3" style={{ textAlign: 'center' }}>Your decisions stay private</div>
+
+          {/* Demo entry point — visually secondary, never competes with sign-in */}
+          <div className="up4" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>
+              Not ready to sign up?
+            </div>
+            <button
+              onClick={onDemo}
+              style={{
+                background: 'none', border: '1px solid var(--border2)',
+                borderRadius: 'var(--r-sm)', padding: '11px 20px',
+                fontFamily: 'Geist, sans-serif', fontSize: 13,
+                color: 'var(--cream2)', cursor: 'pointer', width: '100%',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => {
+                (e.target as HTMLButtonElement).style.borderColor = 'var(--muted)'
+                ;(e.target as HTMLButtonElement).style.color = 'var(--cream)'
+              }}
+              onMouseLeave={e => {
+                (e.target as HTMLButtonElement).style.borderColor = 'var(--border2)'
+                ;(e.target as HTMLButtonElement).style.color = 'var(--cream2)'
+              }}
+            >
+              Try it instantly →
+            </button>
+          </div>
         </div>
       </div>
     </div>

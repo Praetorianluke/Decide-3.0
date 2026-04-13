@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { User, Profile, HistoryEntry, Action } from '@/types'
 import { load, save, clear } from '@/lib/storage'
 
-import AuthScreen      from './AuthScreen'
+import AuthScreen       from './AuthScreen'
 import OnboardingScreen from './OnboardingScreen'
-import HomeScreen      from './HomeScreen'
-import DecisionScreen  from './DecisionScreen'
-import HistoryScreen   from './HistoryScreen'
-import SettingsScreen  from './SettingsScreen'
+import HomeScreen       from './HomeScreen'
+import DecisionScreen   from './DecisionScreen'
+import HistoryScreen    from './HistoryScreen'
+import SettingsScreen   from './SettingsScreen'
+import DemoScreen       from './DemoScreen'
 
 type Screen = 'home' | 'history' | 'settings'
 
@@ -24,6 +25,7 @@ export default function App() {
   const [history,  setHistory]  = useState<HistoryEntry[]>([])
   const [screen,   setScreen]   = useState<Screen>('home')
   const [deciding, setDeciding] = useState<Deciding | null>(null)
+  const [demo,     setDemo]     = useState(false)
   const [ready,    setReady]    = useState(false)
 
   // Hydrate from localStorage on mount (client only)
@@ -59,6 +61,16 @@ export default function App() {
   // Avoid hydration flash
   if (!ready) return null
 
+  // Demo mode — unauthenticated, single use
+  if (demo) {
+    return (
+      <DemoScreen
+        onSignUp={() => { setDemo(false) }}
+        onBack={() => setDemo(false)}
+      />
+    )
+  }
+
   // Auth gate
   if (!user) {
     return (
@@ -67,6 +79,7 @@ export default function App() {
           save('dfk_user', u)
           setUser(u)
         }}
+        onDemo={() => setDemo(true)}
       />
     )
   }
