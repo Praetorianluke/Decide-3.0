@@ -9,6 +9,26 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
+    // Demo mode — unauthenticated, real Claude call, no profile context
+    if (body.demo) {
+      const { prompt } = body
+      if (!prompt?.trim()) {
+        return NextResponse.json({ error: 'No prompt provided' }, { status: 400 })
+      }
+      const msg = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 350,
+        system: `You are a decisive personal decision assistant. Give one clear answer.
+Return ONLY valid JSON — no markdown, no prose.
+Schema: {"bestChoice":"","reason":"","backups":[],"followUp":null}
+Rules: bestChoice max ~8 words. reason 1 sentence. backups 0–2. Tone: calm, confident, decisive.`,
+        messages: [{ role: 'user', content: `Situation: ${prompt}` }],
+      })
+      const text = msg.content.map(b => (b.type === 'text' ? b.text : '')).join('')
+      const result = JSON.parse(text.replace(/```json|```/g, '').trim())
+      return NextResponse.json(result)
+    }
+
     // Clarifying questions mode
     if (body.clarifyOnly) {
       const { category, prompt } = body
