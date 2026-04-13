@@ -110,14 +110,16 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
             borderTopColor: 'var(--amber)',
             animation: 'spin 0.9s linear infinite',
           }} />
-          <div style={{
-            fontFamily: 'Instrument Serif, serif',
-            fontSize: 22,
-            color: 'var(--cream)',
-            marginBottom: 8,
-            animation: 'fadeSwap 0.4s ease both',
-            key: loadingLine,
-          }}>
+          <div
+            key={loadingLine}
+            style={{
+              fontFamily: 'Instrument Serif, serif',
+              fontSize: 22,
+              color: 'var(--cream)',
+              marginBottom: 8,
+              animation: 'fadeSwap 0.4s ease both',
+            }}
+          >
             {LOADING_LINES[loadingLine]}
           </div>
           <div style={{ fontSize: 13, color: 'var(--muted)' }}>
