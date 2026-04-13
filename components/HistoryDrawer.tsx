@@ -291,7 +291,7 @@ export default function HistoryDrawer({ onClose }: Props) {
                     letterSpacing: '0.1em', textTransform: 'uppercase',
                     color: 'var(--muted)', marginBottom: 4,
                   }}>
-                    {entries.length} saved · last {entries.length === MAX ? MAX : entries.length}
+                    {entries.length} saved · last {entries.length === 20 ? 20 : entries.length}
                   </div>
                   {entries.map(e => (
                     <HistoryItem key={e.id} entry={e} onClick={() => setSelected(e)} />
