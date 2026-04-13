@@ -1,4 +1,4 @@
-const KEY = 'dfk_demo_usage'
+const KEY = 'dfk_usage'
 const DAILY_LIMIT = 3
 
 interface UsageRecord {
