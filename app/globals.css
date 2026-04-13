@@ -210,6 +210,12 @@ h3 { font-family: 'Instrument Serif', serif; font-size: 20px; line-height: 1.25;
 .up3 { animation: up 0.3s ease 0.14s both; }
 .up4 { animation: up 0.3s ease 0.21s both; }
 
+/* Loading spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Loading text swap */
+@keyframes fadeSwap { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
 /* Scrollbar */
 ::-webkit-scrollbar       { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
