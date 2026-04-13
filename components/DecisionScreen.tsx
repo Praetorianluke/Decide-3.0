@@ -53,6 +53,7 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
   const [remaining, setRemaining] = useState(DAILY_LIMIT)
   const [resultVisible, setResultVisible] = useState(false)
   const [showHistory, setShowHistory]     = useState(false)
+  const [copied, setCopied]               = useState(false)
 
   // Hydrate remaining count and check limit on mount
   useEffect(() => {
@@ -116,6 +117,14 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
       setFb(null)
       setErr('')
     }, 80)
+  }
+
+  const handleCopy = (r: DecisionResult, p: string) => {
+    const text = `I asked: ${p}\nBest move: ${r.bestChoice}\nWhy: ${r.reason}\nTry it: https://decide-3-0.vercel.app`
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
   }
 
   // ── Limit wall ───────────────────────────────────────────────────────────────
@@ -233,6 +242,33 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
             </div>
           </div>
         )}
+
+        {/* Share */}
+        <div>
+          <div style={{ ...S.sectionLabel, marginBottom: 10 }}>Share this decision</div>
+          <button
+            onClick={() => handleCopy(result, prompt)}
+            style={{
+              width: '100%',
+              padding: '11px 16px',
+              borderRadius: 'var(--r-sm)',
+              border: `1px solid ${copied ? 'var(--green)' : 'var(--border2)'}`,
+              background: copied ? 'var(--green-dim)' : 'transparent',
+              color: copied ? 'var(--green)' : 'var(--cream2)',
+              fontFamily: 'Geist, sans-serif',
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+              letterSpacing: '0.01em',
+            }}
+          >
+            {copied ? '✓ Copied' : '⎘ Copy result'}
+          </button>
+        </div>
 
         {/* Follow-up question (signed-in flow has this, demo doesn't) */}
         {result.followUp && (
