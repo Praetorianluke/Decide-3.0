@@ -20,13 +20,14 @@ interface Deciding {
 }
 
 export default function App() {
-  const [user,     setUser]     = useState<User | null>(null)
-  const [profile,  setProfile]  = useState<Profile | null>(null)
-  const [history,  setHistory]  = useState<HistoryEntry[]>([])
-  const [screen,   setScreen]   = useState<Screen>('home')
-  const [deciding, setDeciding] = useState<Deciding | null>(null)
-  const [demo,     setDemo]     = useState(false)
-  const [ready,    setReady]    = useState(false)
+  const [user,        setUser]       = useState<User | null>(null)
+  const [profile,     setProfile]    = useState<Profile | null>(null)
+  const [history,     setHistory]    = useState<HistoryEntry[]>([])
+  const [screen,      setScreen]     = useState<Screen>('home')
+  const [deciding,    setDeciding]   = useState<Deciding | null>(null)
+  const [demo,        setDemo]       = useState(false)
+  const [demoPrompt,  setDemoPrompt] = useState<string | undefined>(undefined)
+  const [ready,       setReady]      = useState(false)
 
   // Hydrate from localStorage on mount (client only)
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function App() {
       <DemoScreen
         onSignUp={() => { setDemo(false) }}
         onBack={() => setDemo(false)}
+        initialPrompt={demoPrompt}
       />
     )
   }
@@ -79,7 +81,10 @@ export default function App() {
           save('dfk_user', u)
           setUser(u)
         }}
-        onDemo={() => setDemo(true)}
+        onDemo={(prompt) => {
+          setDemoPrompt(prompt)
+          setDemo(true)
+        }}
       />
     )
   }
