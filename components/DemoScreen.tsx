@@ -27,8 +27,8 @@ const EXAMPLES = [
 
 const LOADING_LINES = [
   'Thinking for you…',
-  'Making the best choice…',
-  'Cutting through the noise…',
+  'Weighing your options…',
+  'Making the best call…',
   'Almost there…',
 ]
 
@@ -40,6 +40,25 @@ interface Props {
   initialPrompt?: string
 }
 
+// ─── Inline styles shared across phases ───────────────────────────────────────
+
+const S = {
+  sectionLabel: {
+    fontFamily: 'Geist Mono, monospace',
+    fontSize: 9,
+    letterSpacing: '0.13em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--muted)',
+    marginBottom: 8,
+  },
+  divider: {
+    height: '1px',
+    background: 'var(--border)',
+    margin: '20px 0',
+    opacity: 0.5,
+  },
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
@@ -49,6 +68,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   const [err, setErr]             = useState('')
   const [loadingLine, setLoading] = useState(0)
   const [exampleIdx, setExample]  = useState(0)
+  const [resultVisible, setResultVisible] = useState(false)
   const textareaRef               = useRef<HTMLTextAreaElement>(null)
 
   // Rotate example placeholder
@@ -65,6 +85,13 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
     return () => clearInterval(t)
   }, [phase])
 
+  // Trigger result entrance animation one frame after mount
+  useEffect(() => {
+    if (phase !== 'result') return
+    const t = requestAnimationFrame(() => setResultVisible(true))
+    return () => cancelAnimationFrame(t)
+  }, [phase])
+
   // Auto-run if launched with a pre-filled prompt
   useEffect(() => {
     if (initialPrompt?.trim()) run(initialPrompt)
@@ -74,6 +101,8 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
     const text = (p ?? prompt).trim()
     if (!text) { textareaRef.current?.focus(); return }
     setPhase('loading')
+    setLoading(0)
+    setResultVisible(false)
     setErr('')
     try {
       const r = await getDemoDecision(text)
@@ -86,14 +115,17 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   }, [prompt])
 
   const reset = () => {
-    setPhase('input')
-    setPrompt('')
-    setResult(null)
-    setErr('')
-    setTimeout(() => textareaRef.current?.focus(), 50)
+    setResultVisible(false)
+    // Small delay lets the outgoing state clear before input mounts
+    setTimeout(() => {
+      setPhase('input')
+      setResult(null)
+      setErr('')
+      setTimeout(() => textareaRef.current?.focus(), 60)
+    }, 80)
   }
 
-  // ── Loading ────────────────────────────────────────────────────────────────
+  // ── Loading ──────────────────────────────────────────────────────────────────
 
   if (phase === 'loading') return (
     <div className="root">
@@ -102,35 +134,47 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
       </div>
       <div className="page-center">
         <div style={{ textAlign: 'center' }}>
-          {/* Animated ring */}
+          {/* Slim amber arc spinner */}
           <div style={{
-            width: 48, height: 48, margin: '0 auto 28px',
+            width: 34, height: 34,
+            margin: '0 auto 32px',
             borderRadius: '50%',
-            border: '2px solid var(--border2)',
+            border: '1.5px solid var(--border)',
             borderTopColor: 'var(--amber)',
-            animation: 'spin 0.9s linear infinite',
+            animation: 'spin 0.75s linear infinite',
           }} />
+
+          {/* Cycling message — key remounts element to retrigger animation */}
           <div
             key={loadingLine}
             style={{
               fontFamily: 'Instrument Serif, serif',
-              fontSize: 22,
+              fontSize: 21,
               color: 'var(--cream)',
-              marginBottom: 8,
-              animation: 'fadeSwap 0.4s ease both',
+              marginBottom: 10,
+              letterSpacing: '-0.01em',
+              animation: 'fadeSwap 0.35s ease-out both',
             }}
           >
             {LOADING_LINES[loadingLine]}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-            {prompt.length > 60 ? prompt.slice(0, 60) + '…' : prompt}
+
+          {/* Echo the prompt so users feel seen */}
+          <div style={{
+            fontSize: 13,
+            color: 'var(--muted)',
+            maxWidth: 260,
+            margin: '0 auto',
+            lineHeight: 1.5,
+          }}>
+            {prompt.length > 55 ? `${prompt.slice(0, 55)}…` : prompt}
           </div>
         </div>
       </div>
     </div>
   )
 
-  // ── Result ─────────────────────────────────────────────────────────────────
+  // ── Result ───────────────────────────────────────────────────────────────────
 
   if (phase === 'result' && result) return (
     <div className="root">
@@ -138,50 +182,97 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
         <span className="logo">DFK</span>
         <button className="back-btn" onClick={reset}>Try another</button>
       </div>
-      <div className="page stack s14" style={{ paddingTop: 20 }}>
 
-        {/* Hero result card */}
-        <div className="result-hero up" style={{ padding: '28px 24px 26px' }}>
-          <div className="result-label">Best move</div>
-          <div className="result-choice" style={{ fontSize: 30 }}>{result.bestChoice}</div>
-          <div style={{
-            height: '1px', background: 'var(--border)',
-            margin: '16px 0', opacity: 0.6,
-          }} />
-          <div style={{
-            fontSize: 13,
-            fontFamily: 'Geist Mono, monospace',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: 'var(--muted)',
-            marginBottom: 8,
-          }}>
-            Why this works
+      {/* Outer wrapper animates in as a unit: fade + scale */}
+      <div
+        className="page stack s20"
+        style={{
+          paddingTop: 24,
+          opacity: resultVisible ? 1 : 0,
+          transform: resultVisible ? 'scale(1)' : 'scale(0.98)',
+          transition: 'opacity 0.25s ease-out, transform 0.25s ease-out',
+        }}
+      >
+
+        {/* ── Hero result card ───────────────────────────────────────────── */}
+        <div className="result-hero" style={{ padding: '28px 24px 26px' }}>
+
+          {/* Eyebrow label — upgraded copy */}
+          <div style={S.sectionLabel}>Your best move right now</div>
+
+          {/* The decision — dominant, large */}
+          <div
+            className="result-choice"
+            style={{ fontSize: 30, lineHeight: 1.15, marginBottom: 0 }}
+          >
+            {result.bestChoice}
           </div>
-          <div className="result-reason" style={{ fontSize: 15, lineHeight: 1.65 }}>
+
+          <div style={S.divider} />
+
+          {/* Rationale label — upgraded copy */}
+          <div style={S.sectionLabel}>Why this is the right choice</div>
+
+          <div
+            className="result-reason"
+            style={{ fontSize: 15, lineHeight: 1.65, marginBottom: 16 }}
+          >
             {result.reason}
+          </div>
+
+          {/* Confidence signal — subtle, trust-building */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            {/* Small amber dot */}
+            <div style={{
+              width: 6, height: 6,
+              borderRadius: '50%',
+              background: 'var(--amber)',
+              opacity: 0.85,
+              flexShrink: 0,
+            }} />
+            <span style={{
+              fontFamily: 'Geist Mono, monospace',
+              fontSize: 10,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--muted)',
+            }}>
+              Confidence: High
+            </span>
           </div>
         </div>
 
-        {/* Backups */}
+        {/* ── Backups — clearly secondary ────────────────────────────────── */}
         {result.backups?.length > 0 && (
-          <div className="up2">
-            <div className="mono" style={{ marginBottom: 10 }}>Also consider</div>
+          <div>
+            <div style={{ ...S.sectionLabel, marginBottom: 10 }}>
+              If not, consider
+            </div>
             <div className="stack s6">
               {result.backups.map((b, i) => (
                 <div key={i} className="backup-row">
                   <span className="backup-n">{i + 1}</span>
-                  <span style={{ fontSize: 14, color: 'var(--cream2)', lineHeight: 1.4 }}>{b}</span>
+                  <span style={{
+                    fontSize: 14,
+                    color: 'var(--cream2)',
+                    lineHeight: 1.45,
+                  }}>
+                    {b}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="flex1" style={{ minHeight: 16 }} />
+        <div className="flex1" style={{ minHeight: 8 }} />
 
-        {/* Conversion CTA */}
-        <div className="up3" style={{
+        {/* ── Conversion CTA ─────────────────────────────────────────────── */}
+        <div style={{
           background: 'var(--surface)',
           border: '1px solid var(--border2)',
           borderRadius: 'var(--r)',
@@ -191,7 +282,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
             fontFamily: 'Instrument Serif, serif',
             fontSize: 19,
             lineHeight: 1.25,
-            marginBottom: 8,
+            marginBottom: 7,
           }}>
             Want unlimited decisions?
           </div>
@@ -201,7 +292,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
             lineHeight: 1.55,
             marginBottom: 18,
           }}>
-            Save history, refine your preferences, and get sharper answers every time.
+            Save history, refine preferences, and get sharper answers every time.
           </div>
           <div className="stack s8">
             <button className="btn btn-primary" onClick={onSignUp}>
@@ -221,7 +312,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
     </div>
   )
 
-  // ── Input ──────────────────────────────────────────────────────────────────
+  // ── Input ────────────────────────────────────────────────────────────────────
 
   return (
     <div className="root">
@@ -261,15 +352,15 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
                 transition: 'border-color 0.2s',
               }}
             />
-            {/* Inline submit — lives inside the textarea visually */}
+            {/* Inline submit button — overlaid inside the textarea */}
             <button
               onClick={() => run()}
               disabled={!prompt.trim()}
               style={{
                 position: 'absolute',
                 bottom: 12, right: 12,
-                background: prompt.trim() ? 'var(--cream)' : 'var(--surface2)',
-                color: prompt.trim() ? 'var(--bg)' : 'var(--muted)',
+                background: prompt.trim() ? 'var(--amber)' : 'var(--surface2)',
+                color: prompt.trim() ? '#150E00' : 'var(--muted)',
                 border: 'none',
                 borderRadius: 7,
                 padding: '8px 16px',
@@ -277,7 +368,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
                 fontSize: 13,
                 fontWeight: 500,
                 cursor: prompt.trim() ? 'pointer' : 'not-allowed',
-                transition: 'all 0.15s',
+                transition: 'background 0.15s, color 0.15s',
               }}
             >
               Decide →
@@ -311,10 +402,10 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
                 style={{
                   padding: '8px 14px',
                   borderRadius: 100,
-                  border: '1px solid var(--border2)',
+                  border: '1px solid',
+                  borderColor: prompt === ex ? 'var(--amber)' : 'var(--border2)',
                   background: prompt === ex ? 'var(--amber-dim)' : 'var(--surface)',
                   color: prompt === ex ? 'var(--amber)' : 'var(--cream2)',
-                  borderColor: prompt === ex ? 'var(--amber)' : 'var(--border2)',
                   fontFamily: 'Geist, sans-serif',
                   fontSize: 13,
                   cursor: 'pointer',
@@ -330,7 +421,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
 
         <div className="flex1" />
 
-        {/* Soft sign-in nudge at the bottom */}
+        {/* Soft sign-in nudge */}
         <div className="up4" style={{ textAlign: 'center', paddingTop: 8 }}>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>
             Already have an account?{' '}
