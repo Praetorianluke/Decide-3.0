@@ -5,7 +5,9 @@ import { Action, DecisionResult, HistoryEntry, Profile } from '@/types'
 import { PLACEHOLDERS } from '@/lib/constants'
 import { getDecision, getClarifiers } from '@/lib/api'
 import { isLimitReached, incrementUsage, getRemainingCount, DAILY_LIMIT } from '@/lib/usage'
+import { saveDecision } from '@/lib/history'
 import { TopBar, LoadingSpinner, UpgradeWall } from './shared'
+import HistoryDrawer from './HistoryDrawer'
 
 // ─── Shared result styles ─────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
   const [err, setErr]         = useState('')
   const [remaining, setRemaining] = useState(DAILY_LIMIT)
   const [resultVisible, setResultVisible] = useState(false)
+  const [showHistory, setShowHistory]     = useState(false)
 
   // Hydrate remaining count and check limit on mount
   useEffect(() => {
@@ -78,9 +81,10 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
 
     try {
       const r = await getDecision({ category: action.label, prompt: p, profile, clarifyingAnswers: ans })
-      // Increment only on successful result
+      // Increment usage and persist to history — only on successful result
       incrementUsage()
       setRemaining(getRemainingCount())
+      saveDecision(p, r, action.id, action.label)
       setResult(r)
       setPhase('result')
       onSave({ result: r, prompt: p, category: action.id, label: action.label })
@@ -137,21 +141,32 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
   // ── Result ───────────────────────────────────────────────────────────────────
 
   if (phase === 'result' && result) return (
-    <div className="root">
+    <>
+      {showHistory && <HistoryDrawer onClose={() => setShowHistory(false)} />}
+      <div className="root">
       <TopBar
         onBack={onBack}
         right={
-          remaining > 0 ? (
-            <button className="back-btn" onClick={tryAnother}>Try another</button>
-          ) : (
-            <span style={{
-              fontFamily: 'Geist Mono, monospace',
-              fontSize: 10, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: 'var(--amber)',
-            }}>
-              Last free decision
-            </span>
-          )
+          <div className="row" style={{ gap: 12 }}>
+            <button
+              className="back-btn"
+              onClick={() => setShowHistory(true)}
+              style={{ color: 'var(--muted)' }}
+            >
+              History
+            </button>
+            {remaining > 0 ? (
+              <button className="back-btn" onClick={tryAnother}>Try another</button>
+            ) : (
+              <span style={{
+                fontFamily: 'Geist Mono, monospace',
+                fontSize: 10, letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: 'var(--amber)',
+              }}>
+                Last free decision
+              </span>
+            )}
+          </div>
         }
       />
 
@@ -186,6 +201,20 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
               letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)',
             }}>
               Confidence: High
+            </span>
+          </div>
+
+          {/* Saved indicator */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            marginLeft: 12,
+          }}>
+            <span style={{
+              fontFamily: 'Geist Mono, monospace', fontSize: 10,
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: 'var(--green)',
+            }}>
+              ✓ Saved
             </span>
           </div>
         </div>
@@ -267,6 +296,7 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
         )}
       </div>
     </div>
+    </>
   )
 
   // ── Clarify ──────────────────────────────────────────────────────────────────
@@ -318,18 +348,27 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
   // ── Input ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="root">
+    <>
+      {showHistory && <HistoryDrawer onClose={() => setShowHistory(false)} />}
+      <div className="root">
       <TopBar
         onBack={onBack}
         right={
           <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+            <button
+              className="back-btn"
+              onClick={() => setShowHistory(true)}
+              style={{ color: 'var(--muted)' }}
+            >
+              History
+            </button>
             <span style={{
               fontFamily: 'Geist Mono, monospace',
               fontSize: 10, letterSpacing: '0.08em',
               textTransform: 'uppercase',
               color: remaining <= 1 ? 'var(--amber)' : 'var(--muted)',
             }}>
-              {remaining} {remaining === 1 ? 'decision' : 'decisions'} left
+              {remaining} left
             </span>
             <span style={{ fontSize: 22 }}>{action.emoji}</span>
           </div>
@@ -369,5 +408,6 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
         </div>
       </div>
     </div>
+    </>
   )
 }
