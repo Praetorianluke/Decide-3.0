@@ -2,12 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { DecisionResult } from '@/types'
-import {
-  getRemainingCount,
-  isLimitReached,
-  incrementUsage,
-  DAILY_LIMIT,
-} from '@/lib/usage'
+import { getRemainingCount, isLimitReached, incrementUsage, DAILY_LIMIT } from '@/lib/usage'
+import { LoadingSpinner, UpgradeWall } from './shared'
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
@@ -31,21 +27,7 @@ const EXAMPLES = [
   'What task should I do first?',
 ]
 
-const LOADING_LINES = [
-  'Thinking for you…',
-  'Weighing your options…',
-  'Making the best call…',
-  'Almost there…',
-]
-
-const PRO_BENEFITS = [
-  { icon: '∞', label: 'Unlimited decisions' },
-  { icon: '◈', label: 'Saved decision history' },
-  { icon: '◎', label: 'Personalized recommendations' },
-  { icon: '⚡', label: 'Faster clarity, anytime' },
-]
-
-// ─── Shared styles ────────────────────────────────────────────────────────────
+// ─── Shared result styles ─────────────────────────────────────────────────────
 
 const S = {
   sectionLabel: {
@@ -79,14 +61,12 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   const [prompt, setPrompt] = useState(initialPrompt || '')
   const [result, setResult] = useState<DecisionResult | null>(null)
   const [err, setErr]       = useState('')
-  const [loadingLine, setLoading]       = useState(0)
-  const [exampleIdx, setExample]        = useState(0)
+  const [exampleIdx, setExample]          = useState(0)
   const [resultVisible, setResultVisible] = useState(false)
-  const [remaining, setRemaining]       = useState(DAILY_LIMIT)
-  const [paymentsModal, setPaymentsModal] = useState(false)
+  const [remaining, setRemaining]         = useState(DAILY_LIMIT)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Hydrate usage from localStorage on mount (client only)
+  // Hydrate usage on mount
   useEffect(() => {
     if (isLimitReached()) {
       setPhase('limit')
@@ -102,14 +82,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
     return () => clearInterval(t)
   }, [phase])
 
-  // Cycle loading copy
-  useEffect(() => {
-    if (phase !== 'loading') return
-    const t = setInterval(() => setLoading(i => (i + 1) % LOADING_LINES.length), 1600)
-    return () => clearInterval(t)
-  }, [phase])
-
-  // Trigger result entrance animation one frame after mount
+  // Trigger result entrance animation
   useEffect(() => {
     if (phase !== 'result') return
     const t = requestAnimationFrame(() => setResultVisible(true))
@@ -127,18 +100,14 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   const run = useCallback(async (p?: string) => {
     const text = (p ?? prompt).trim()
     if (!text) { textareaRef.current?.focus(); return }
-
-    // Check limit before firing the API call
     if (isLimitReached()) { setPhase('limit'); return }
 
     setPhase('loading')
-    setLoading(0)
     setResultVisible(false)
     setErr('')
 
     try {
       const r = await getDemoDecision(text)
-      // Increment only on successful result — not on errors or loading states
       incrementUsage()
       setRemaining(getRemainingCount())
       setResult(r)
@@ -150,11 +119,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   }, [prompt])
 
   const reset = () => {
-    // If limit just hit after this result, go straight to limit screen
-    if (isLimitReached()) {
-      setTimeout(() => setPhase('limit'), 80)
-      return
-    }
+    if (isLimitReached()) { setTimeout(() => setPhase('limit'), 80); return }
     setResultVisible(false)
     setTimeout(() => {
       setPhase('input')
@@ -167,191 +132,20 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   // ── Limit wall ───────────────────────────────────────────────────────────────
 
   if (phase === 'limit') return (
-    <>
-      {/* Payments-coming-soon modal */}
-      {paymentsModal && (
-        <div
-          onClick={() => setPaymentsModal(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 50,
-            background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px',
-            animation: 'fadeSwap 0.2s ease-out both',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border2)',
-              borderRadius: 'var(--r)',
-              padding: '32px 28px',
-              maxWidth: 340, width: '100%',
-              textAlign: 'center',
-              animation: 'up 0.25s ease-out both',
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 16 }}>🔜</div>
-            <div style={{
-              fontFamily: 'Instrument Serif, serif',
-              fontSize: 22, marginBottom: 10,
-            }}>
-              Payments coming soon
-            </div>
-            <div style={{
-              fontSize: 14, color: 'var(--muted)',
-              lineHeight: 1.6, marginBottom: 24,
-            }}>
-              We&apos;re putting the finishing touches on Pro.
-              Drop your email and we&apos;ll notify you the moment it&apos;s live.
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => setPaymentsModal(false)}
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="root">
-        <div className="topbar">
-          <span className="logo">DFK</span>
-          <button className="back-btn" onClick={onBack}>Sign in</button>
-        </div>
-
-        <div
-          className="page stack s20"
-          style={{
-            paddingTop: 28,
-            animation: 'up 0.3s ease-out both',
-          }}
-        >
-          {/* Limit message */}
-          <div style={{ textAlign: 'center', paddingTop: 8 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: '50%',
-              background: 'var(--amber-dim)',
-              border: '1px solid var(--amber)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 20px',
-              fontSize: 20,
-            }}>
-              ◑
-            </div>
-            <h2 style={{ marginBottom: 10, fontSize: 24 }}>
-              You&apos;ve used your free<br />decisions for today
-            </h2>
-            <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>
-              Free users get {DAILY_LIMIT} decisions per day.<br />
-              Upgrade for unlimited access.
-            </div>
-          </div>
-
-          {/* Pro benefits */}
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--r)',
-            padding: '20px',
-          }}>
-            <div style={S.sectionLabel}>What you get with Pro</div>
-            <div className="stack s12">
-              {PRO_BENEFITS.map(b => (
-                <div key={b.label} className="row" style={{ gap: 14 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 7,
-                    background: 'var(--amber-dim)',
-                    border: '1px solid var(--amber)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, color: 'var(--amber)',
-                    flexShrink: 0,
-                  }}>
-                    {b.icon}
-                  </div>
-                  <span style={{ fontSize: 14, color: 'var(--cream2)' }}>{b.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex1" style={{ minHeight: 8 }} />
-
-          {/* CTAs */}
-          <div className="stack s10">
-            <button
-              className="btn btn-amber"
-              onClick={() => setPaymentsModal(true)}
-              style={{ fontSize: 15, padding: '16px' }}
-            >
-              Upgrade to Pro →
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={onSignUp}
-              style={{ fontSize: 13 }}
-            >
-              Create free account to save progress
-            </button>
-            <button
-              onClick={onBack}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: 'Geist, sans-serif', fontSize: 13,
-                color: 'var(--muted)', padding: '8px',
-                textAlign: 'center',
-              }}
-            >
-              Come back tomorrow
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
+    <UpgradeWall
+      onSignUp={onSignUp}
+      onBack={onBack}
+      isSignedIn={false}
+    />
   )
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 
   if (phase === 'loading') return (
     <div className="root">
-      <div className="topbar">
-        <span className="logo">DFK</span>
-      </div>
+      <div className="topbar"><span className="logo">DFK</span></div>
       <div className="page-center">
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 34, height: 34,
-            margin: '0 auto 32px',
-            borderRadius: '50%',
-            border: '1.5px solid var(--border)',
-            borderTopColor: 'var(--amber)',
-            animation: 'spin 0.75s linear infinite',
-          }} />
-          <div
-            key={loadingLine}
-            style={{
-              fontFamily: 'Instrument Serif, serif',
-              fontSize: 21,
-              color: 'var(--cream)',
-              marginBottom: 10,
-              letterSpacing: '-0.01em',
-              animation: 'fadeSwap 0.35s ease-out both',
-            }}
-          >
-            {LOADING_LINES[loadingLine]}
-          </div>
-          <div style={{
-            fontSize: 13,
-            color: 'var(--muted)',
-            maxWidth: 260,
-            margin: '0 auto',
-            lineHeight: 1.5,
-          }}>
-            {prompt.length > 55 ? `${prompt.slice(0, 55)}…` : prompt}
-          </div>
-        </div>
+        <LoadingSpinner prompt={prompt} />
       </div>
     </div>
   )
@@ -362,18 +156,13 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
     <div className="root">
       <div className="topbar">
         <span className="logo">DFK</span>
-        {/* Show remaining count only if there are decisions left */}
         {remaining > 0 ? (
-          <button className="back-btn" onClick={reset}>
-            Try another
-          </button>
+          <button className="back-btn" onClick={reset}>Try another</button>
         ) : (
           <span style={{
             fontFamily: 'Geist Mono, monospace',
-            fontSize: 10,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--amber)',
+            fontSize: 10, letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: 'var(--amber)',
           }}>
             Last free decision
           </span>
@@ -400,7 +189,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
           <div className="result-reason" style={{ fontSize: 15, lineHeight: 1.65, marginBottom: 16 }}>
             {result.reason}
           </div>
-          {/* Confidence signal */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <div style={{
               width: 6, height: 6, borderRadius: '50%',
@@ -415,7 +203,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
           </div>
         </div>
 
-        {/* Backups */}
         {result.backups?.length > 0 && (
           <div>
             <div style={{ ...S.sectionLabel, marginBottom: 10 }}>If not, consider</div>
@@ -432,7 +219,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
 
         <div className="flex1" style={{ minHeight: 8 }} />
 
-        {/* CTA — adapts based on remaining count */}
         {remaining > 0 ? (
           <div style={{
             background: 'var(--surface)',
@@ -461,7 +247,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
             </div>
           </div>
         ) : (
-          /* No decisions left — show upgrade prompt inline */
           <div style={{
             background: 'var(--amber-dim)',
             border: '1px solid var(--amber)',
@@ -470,8 +255,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
           }}>
             <div style={{
               fontFamily: 'Instrument Serif, serif',
-              fontSize: 18, lineHeight: 1.3, marginBottom: 7,
-              color: 'var(--cream)',
+              fontSize: 18, lineHeight: 1.3, marginBottom: 7, color: 'var(--cream)',
             }}>
               That was your last free decision today
             </div>
@@ -479,10 +263,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
               Upgrade for unlimited access and smarter personalization.
             </div>
             <div className="stack s8">
-              <button
-                className="btn btn-amber"
-                onClick={() => setPhase('limit')}
-              >
+              <button className="btn btn-amber" onClick={() => setPhase('limit')}>
                 See upgrade options →
               </button>
               <button className="btn btn-ghost" onClick={onSignUp} style={{ fontSize: 13 }}>
@@ -491,7 +272,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )
@@ -503,11 +283,9 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
       <div className="topbar">
         <span className="logo">DFK</span>
         <div className="row" style={{ gap: 12, alignItems: 'center' }}>
-          {/* Remaining indicator — subtle, muted, never alarming */}
           <span style={{
             fontFamily: 'Geist Mono, monospace',
-            fontSize: 10,
-            letterSpacing: '0.08em',
+            fontSize: 10, letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: remaining <= 1 ? 'var(--amber)' : 'var(--muted)',
           }}>
@@ -518,7 +296,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
       </div>
 
       <div className="page" style={{ paddingTop: 28 }}>
-        {/* Headline */}
         <div className="up" style={{ marginBottom: 28 }}>
           <h1 style={{ fontSize: 32, marginBottom: 10 }}>
             What should you<br />do right now?
@@ -528,7 +305,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
           </div>
         </div>
 
-        {/* Input block */}
         <div className="up2" style={{ marginBottom: 12 }}>
           <div style={{ position: 'relative' }}>
             <textarea
@@ -564,17 +340,13 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
               Decide →
             </button>
           </div>
-          <div style={{
-            fontSize: 11, color: 'var(--muted)',
-            marginTop: 6, textAlign: 'right',
-          }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'right' }}>
             ⌘↵ to submit
           </div>
         </div>
 
         {err && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 8 }}>{err}</div>}
 
-        {/* Example chips */}
         <div className="up3">
           <div className="mono" style={{ marginBottom: 10 }}>Try an example</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -600,7 +372,6 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
 
         <div className="flex1" />
 
-        {/* Soft sign-in nudge */}
         <div className="up4" style={{ textAlign: 'center', paddingTop: 8 }}>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>Already have an account? </span>
           <button
