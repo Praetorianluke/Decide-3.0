@@ -56,6 +56,7 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
   const [showHistory, setShowHistory]     = useState(false)
   const [copied, setCopied]               = useState(false)
   const shareRef                          = useRef<HTMLDivElement>(null)
+  const styleVariant                      = useRef<number>(0)
 
   // Hydrate remaining count and check limit on mount
   useEffect(() => {
@@ -88,6 +89,7 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
       incrementUsage()
       setRemaining(getRemainingCount())
       saveDecision(p, r, action.id, action.label)
+      styleVariant.current = Math.floor(Math.random() * 3)
       setResult(r)
       setPhase('result')
       onSave({ result: r, prompt: p, category: action.id, label: action.label })
@@ -282,61 +284,93 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
           </button>
         </div>
 
-        {/* Share image card */}
+        {/* Share image card — viral rotating styles */}
         <div>
-          <div
-            ref={shareRef}
-            style={{
-              background: '#0b0b0b',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 16,
-              padding: '28px 24px 24px',
-              fontFamily: 'Geist, sans-serif',
-            }}
-          >
-            <div style={{
-              fontFamily: 'Geist Mono, monospace',
-              fontSize: 9, letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.35)',
-              marginBottom: 16,
-            }}>
-              Decision
-            </div>
-            <div style={{
-              fontSize: 12, color: 'rgba(255,255,255,0.45)',
-              lineHeight: 1.5, marginBottom: 18,
-              fontStyle: 'italic',
-            }}>
-              {prompt.length > 90 ? `${prompt.slice(0, 90)}…` : prompt}
-            </div>
-            <div style={{
-              fontSize: 22, fontWeight: 600,
-              color: '#FFFFFF',
-              lineHeight: 1.2, marginBottom: 12,
-              letterSpacing: '-0.02em',
-            }}>
-              {result.bestChoice}
-            </div>
-            <div style={{
-              height: 1, background: 'rgba(255,255,255,0.08)',
-              marginBottom: 14,
-            }} />
-            <div style={{
-              fontSize: 13, color: 'rgba(255,255,255,0.55)',
-              lineHeight: 1.6,
-            }}>
-              {result.reason}
-            </div>
-            <div style={{
-              marginTop: 22,
-              fontSize: 10, color: 'rgba(255,255,255,0.25)',
-              fontFamily: 'Geist Mono, monospace',
-              letterSpacing: '0.06em',
-            }}>
-              decide-3-0.vercel.app
-            </div>
-          </div>
+          {(() => {
+            const v = styleVariant.current
+            const hooks   = ["I asked AI what to do…", "Couldn't decide, so I asked this app", "AI made this decision for me 😭"]
+            const tags    = ["🥶 Cold truth", "🤝 Real advice", "😬 Be honest"]
+            const tagClrs = ["#60a5fa", "#4ade80", "#fb923c"]
+            const choice  = v === 0 ? result.bestChoice.toUpperCase() : result.bestChoice
+            const reasons = [
+              "You don't actually have a good reason not to. Future you will thank you.",
+              "This is the smart move, even if it's not the easiest one. You'll feel better after.",
+              "You already knew this was the answer. The app just said it out loud.",
+            ]
+            const bgGrads = [
+              "radial-gradient(ellipse at top right, rgba(96,165,250,0.12) 0%, transparent 60%), #0b0b0b",
+              "radial-gradient(ellipse at top right, rgba(232,168,62,0.10) 0%, transparent 60%), #0b0b0b",
+              "radial-gradient(ellipse at top right, rgba(251,146,60,0.12) 0%, transparent 60%), #0b0b0b",
+            ]
+            return (
+              <div
+                ref={shareRef}
+                style={{
+                  background: bgGrads[v],
+                  border: '1px solid rgba(255,255,255,0.09)',
+                  borderRadius: 18,
+                  padding: '26px 22px 22px',
+                  fontFamily: 'Geist, sans-serif',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Hook */}
+                <div style={{
+                  fontSize: 11, color: 'rgba(255,255,255,0.4)',
+                  marginBottom: 18, letterSpacing: '0.01em',
+                }}>
+                  {hooks[v]}
+                </div>
+
+                {/* Decision — dominant */}
+                <div style={{
+                  fontSize: v === 0 ? 26 : 24,
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  lineHeight: 1.15,
+                  marginBottom: 14,
+                  letterSpacing: v === 0 ? '0.01em' : '-0.02em',
+                }}>
+                  {choice}
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 14 }} />
+
+                {/* Rewritten reason */}
+                <div style={{
+                  fontSize: 13, color: 'rgba(255,255,255,0.5)',
+                  lineHeight: 1.6, marginBottom: 18,
+                }}>
+                  {reasons[v]}
+                </div>
+
+                {/* Tag */}
+                <div style={{
+                  display: 'inline-block',
+                  fontSize: 11, fontWeight: 500,
+                  color: tagClrs[v],
+                  background: `${tagClrs[v]}18`,
+                  border: `1px solid ${tagClrs[v]}30`,
+                  borderRadius: 100,
+                  padding: '3px 10px',
+                  marginBottom: 18,
+                }}>
+                  {tags[v]}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                  fontSize: 10, color: 'rgba(255,255,255,0.2)',
+                  fontFamily: 'Geist Mono, monospace',
+                  letterSpacing: '0.06em',
+                }}>
+                  decide-3
+                </div>
+              </div>
+            )
+          })()}
           <button
             onClick={handleDownload}
             style={{
