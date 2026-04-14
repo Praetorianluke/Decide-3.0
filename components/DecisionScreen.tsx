@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { toPng } from 'html-to-image'
 import { Action, DecisionResult, HistoryEntry, Profile } from '@/types'
 import { PLACEHOLDERS } from '@/lib/constants'
 import { getDecision, getClarifiers } from '@/lib/api'
@@ -54,6 +55,7 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
   const [resultVisible, setResultVisible] = useState(false)
   const [showHistory, setShowHistory]     = useState(false)
   const [copied, setCopied]               = useState(false)
+  const shareRef                          = useRef<HTMLDivElement>(null)
 
   // Hydrate remaining count and check limit on mount
   useEffect(() => {
@@ -124,6 +126,16 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  const handleDownload = () => {
+    if (!shareRef.current) return
+    toPng(shareRef.current, { cacheBust: true, pixelRatio: 2 }).then(dataUrl => {
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = 'decision.png'
+      a.click()
     })
   }
 
@@ -267,6 +279,86 @@ export default function DecisionScreen({ action, initPrompt, profile, onBack, on
             }}
           >
             {copied ? '✓ Copied' : '⎘ Copy result'}
+          </button>
+        </div>
+
+        {/* Share image card */}
+        <div>
+          <div
+            ref={shareRef}
+            style={{
+              background: '#0b0b0b',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16,
+              padding: '28px 24px 24px',
+              fontFamily: 'Geist, sans-serif',
+            }}
+          >
+            <div style={{
+              fontFamily: 'Geist Mono, monospace',
+              fontSize: 9, letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.35)',
+              marginBottom: 16,
+            }}>
+              Decision
+            </div>
+            <div style={{
+              fontSize: 12, color: 'rgba(255,255,255,0.45)',
+              lineHeight: 1.5, marginBottom: 18,
+              fontStyle: 'italic',
+            }}>
+              {prompt.length > 90 ? `${prompt.slice(0, 90)}…` : prompt}
+            </div>
+            <div style={{
+              fontSize: 22, fontWeight: 600,
+              color: '#FFFFFF',
+              lineHeight: 1.2, marginBottom: 12,
+              letterSpacing: '-0.02em',
+            }}>
+              {result.bestChoice}
+            </div>
+            <div style={{
+              height: 1, background: 'rgba(255,255,255,0.08)',
+              marginBottom: 14,
+            }} />
+            <div style={{
+              fontSize: 13, color: 'rgba(255,255,255,0.55)',
+              lineHeight: 1.6,
+            }}>
+              {result.reason}
+            </div>
+            <div style={{
+              marginTop: 22,
+              fontSize: 10, color: 'rgba(255,255,255,0.25)',
+              fontFamily: 'Geist Mono, monospace',
+              letterSpacing: '0.06em',
+            }}>
+              decide-3-0.vercel.app
+            </div>
+          </div>
+          <button
+            onClick={handleDownload}
+            style={{
+              width: '100%',
+              marginTop: 8,
+              padding: '11px 16px',
+              borderRadius: 'var(--r-sm)',
+              border: '1px solid var(--border2)',
+              background: 'transparent',
+              color: 'var(--cream2)',
+              fontFamily: 'Geist, sans-serif',
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+              letterSpacing: '0.01em',
+            }}
+          >
+            ↓ Download image
           </button>
         </div>
 

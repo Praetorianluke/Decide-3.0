@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { toPng } from 'html-to-image'
 import { DecisionResult } from '@/types'
 import { getRemainingCount, isLimitReached, incrementUsage, DAILY_LIMIT } from '@/lib/usage'
 import { saveDecision } from '@/lib/history'
@@ -69,6 +70,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   const [showHistory, setShowHistory]     = useState(false)
   const [copied, setCopied]               = useState(false)
   const textareaRef                       = useRef<HTMLTextAreaElement>(null)
+  const shareRef                          = useRef<HTMLDivElement>(null)
 
   // Hydrate usage on mount
   useEffect(() => {
@@ -135,10 +137,20 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   }
 
   const handleCopy = (r: DecisionResult, p: string) => {
-    const text = `I asked: ${p}\nWhat I should do: ${r.bestChoice}\nWhy: ${r.reason}\nTry it: https://decide-3-0.vercel.app`
+    const text = `I asked: ${p}\nBest move: ${r.bestChoice}\nWhy: ${r.reason}\nTry it: https://decide-3-0.vercel.app`
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  const handleDownload = () => {
+    if (!shareRef.current) return
+    toPng(shareRef.current, { cacheBust: true, pixelRatio: 2 }).then(dataUrl => {
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = 'decision.png'
+      a.click()
     })
   }
 
@@ -200,12 +212,12 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
         >
           {/* Hero result card */}
           <div className="result-hero" style={{ padding: '28px 24px 26px' }}>
-            <div style={S.sectionLabel}>What you should do</div>
+            <div style={S.sectionLabel}>Your best move right now</div>
             <div className="result-choice" style={{ fontSize: 30, lineHeight: 1.15, marginBottom: 0 }}>
               {result.bestChoice}
             </div>
             <div style={S.divider} />
-            <div style={S.sectionLabel}>Why this is the right call</div>
+            <div style={S.sectionLabel}>Why this is the right choice</div>
             <div className="result-reason" style={{ fontSize: 15, lineHeight: 1.65, marginBottom: 16 }}>
               {result.reason}
             </div>
@@ -271,6 +283,86 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
               }}
             >
               {copied ? '✓ Copied' : '⎘ Copy result'}
+            </button>
+          </div>
+
+          {/* Share image card */}
+          <div>
+            <div
+              ref={shareRef}
+              style={{
+                background: '#0b0b0b',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 16,
+                padding: '28px 24px 24px',
+                fontFamily: 'Geist, sans-serif',
+              }}
+            >
+              <div style={{
+                fontFamily: 'Geist Mono, monospace',
+                fontSize: 9, letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.35)',
+                marginBottom: 16,
+              }}>
+                Decision
+              </div>
+              <div style={{
+                fontSize: 12, color: 'rgba(255,255,255,0.45)',
+                lineHeight: 1.5, marginBottom: 18,
+                fontStyle: 'italic',
+              }}>
+                {prompt.length > 90 ? `${prompt.slice(0, 90)}…` : prompt}
+              </div>
+              <div style={{
+                fontSize: 22, fontWeight: 600,
+                color: '#FFFFFF',
+                lineHeight: 1.2, marginBottom: 12,
+                letterSpacing: '-0.02em',
+              }}>
+                {result.bestChoice}
+              </div>
+              <div style={{
+                height: 1, background: 'rgba(255,255,255,0.08)',
+                marginBottom: 14,
+              }} />
+              <div style={{
+                fontSize: 13, color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.6,
+              }}>
+                {result.reason}
+              </div>
+              <div style={{
+                marginTop: 22,
+                fontSize: 10, color: 'rgba(255,255,255,0.25)',
+                fontFamily: 'Geist Mono, monospace',
+                letterSpacing: '0.06em',
+              }}>
+                decide-3-0.vercel.app
+              </div>
+            </div>
+            <button
+              onClick={handleDownload}
+              style={{
+                width: '100%',
+                marginTop: 8,
+                padding: '11px 16px',
+                borderRadius: 'var(--r-sm)',
+                border: '1px solid var(--border2)',
+                background: 'transparent',
+                color: 'var(--cream2)',
+                fontFamily: 'Geist, sans-serif',
+                fontSize: 13,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 7,
+                letterSpacing: '0.01em',
+              }}
+            >
+              ↓ Download image
             </button>
           </div>
 
