@@ -135,7 +135,7 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
   }
 
   const handleCopy = (r: DecisionResult, p: string) => {
-    const text = `I asked: ${p}\nBest move: ${r.bestChoice}\nWhy: ${r.reason}\nTry it: https://decide-3-0.vercel.app`
+    const text = `I asked: ${p}\nWhat I should do: ${r.bestChoice}\nWhy: ${r.reason}\nTry it: https://decide-3-0.vercel.app`
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
@@ -200,12 +200,12 @@ export default function DemoScreen({ onSignUp, onBack, initialPrompt }: Props) {
         >
           {/* Hero result card */}
           <div className="result-hero" style={{ padding: '28px 24px 26px' }}>
-            <div style={S.sectionLabel}>Your best move right now</div>
+            <div style={S.sectionLabel}>What you should do</div>
             <div className="result-choice" style={{ fontSize: 30, lineHeight: 1.15, marginBottom: 0 }}>
               {result.bestChoice}
             </div>
             <div style={S.divider} />
-            <div style={S.sectionLabel}>Why this is the right choice</div>
+            <div style={S.sectionLabel}>Why this is the right call</div>
             <div className="result-reason" style={{ fontSize: 15, lineHeight: 1.65, marginBottom: 16 }}>
               {result.reason}
             </div>
